@@ -1,6 +1,9 @@
 version: '3.8'
 
 services:
+  # ========================================
+  # PostgreSQL - Base de datos principal
+  # ========================================
   postgres:
     image: postgres:14-alpine
     container_name: expense-tracker-db
@@ -12,7 +15,17 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - expense-tracker-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # ========================================
+  # Redis - Cache y Pub/Sub
+  # ========================================
   redis:
     image: redis:7-alpine
     container_name: expense-tracker-redis
@@ -20,8 +33,86 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - expense-tracker-network
     command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # ========================================
+  # SonarQube - Análisis de Código
+  # ========================================
+  # ========================================
+  # SonarQube - Análisis de Código
+  # ========================================
+  sonarqube:
+    image: sonarqube:10.3.0-community
+    container_name: expense-tracker-sonarqube
+    depends_on:
+      sonarqube-db:
+        condition: service_healthy
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://sonarqube-db:5432/sonarqube
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: sonar
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    ports:
+      - "9001:9000"  # ← CAMBIAR: de 9000:9000 a 9001:9000
+    networks:
+      - expense-tracker-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9000/api/system/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ========================================
+  # PostgreSQL para SonarQube
+  # ========================================
+  sonarqube-db:
+    image: postgres:15-alpine
+    container_name: expense-tracker-sonarqube-db
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+      POSTGRES_DB: sonarqube
+    volumes:
+      - sonarqube_db:/var/lib/postgresql/data
+    networks:
+      - expense-tracker-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# ========================================
+# Volúmenes Persistentes
+# ========================================
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
+  sonarqube_data:
+    driver: local
+  sonarqube_extensions:
+    driver: local
+  sonarqube_logs:
+    driver: local
+  sonarqube_db:
+    driver: local
+
+# ========================================
+# Red Compartida
+# ========================================
+networks:
+  expense-tracker-network:
+    driver: bridge

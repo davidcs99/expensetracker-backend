@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.5.5'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'org.sonarqube' version '5.1.0.4882'
 }
 
 group = 'com.backend'
@@ -45,4 +46,16 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+sonar {
+	properties {
+		property "sonar.projectKey", "expensetracker-backend"
+		property "sonar.projectName", "ExpenseTracker Backend"
+		property "sonar.host.url", "http://localhost:9001"
+		property "sonar.token", "sqp_5f51b99134ced496c83d1c5c73161f052d6e0c1c"
+		property "sonar.sources", "src/main/java"
+		property "sonar.java.binaries", "build/classes/java/main"
+		property "sonar.sourceEncoding", "UTF-8"
+	}
 }
