@@ -7,9 +7,11 @@ import com.backend.expensetracker_backend.entity.Category;
 import com.backend.expensetracker_backend.entity.Expense;
 import com.backend.expensetracker_backend.entity.SubscriptionType;
 import com.backend.expensetracker_backend.entity.User;
+import com.backend.expensetracker_backend.event.LimitAlertEvent;  // ← NUEVO
 import com.backend.expensetracker_backend.repository.CategoryRepository;
 import com.backend.expensetracker_backend.repository.ExpenseRepository;
 import com.backend.expensetracker_backend.service.AppConfigService;
+import com.backend.expensetracker_backend.service.EventPublisher;  // ← NUEVO
 import com.backend.expensetracker_backend.service.ExpenseService;
 import com.backend.expensetracker_backend.service.UserSyncService;
 import lombok.RequiredArgsConstructor;
@@ -30,12 +32,12 @@ public class ExpenseServiceImpl implements ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final CategoryRepository categoryRepository;
     private final UserSyncService userSyncService;
-    private final AppConfigService appConfigService; // ← Singleton inyectado
+    private final AppConfigService appConfigService;
+    private final EventPublisher eventPublisher;  // ← NUEVO
 
     @Override
     @Transactional
     public ExpenseResponseDTO createExpense(ExpenseCreateDTO dto) {
-        // Validar límites usando el Singleton
         validateUserCanCreateExpense();
 
         User currentUser = userSyncService.getCurrentUser();
@@ -56,6 +58,11 @@ public class ExpenseServiceImpl implements ExpenseService {
 
         log.info("Gasto creado: userId={}, amount={}, categoryId={}",
                 currentUser.getId(), dto.getAmount(), dto.getCategoryId());
+
+        // ═══════════════════════════════════════════════════════════
+        // PATRÓN OBSERVER: Verificar y publicar alerta si es necesario
+        // ═══════════════════════════════════════════════════════════
+        checkAndPublishLimitAlert(currentUser);
 
         return mapToResponseDTO(saved);
     }
@@ -149,24 +156,53 @@ public class ExpenseServiceImpl implements ExpenseService {
     @Override
     @Transactional(readOnly = true)
     public void validateUserCanCreateExpense() {
-        User currentUser = userSyncService.getCurrentUser();
-        boolean isPremium = currentUser.getSubscription() == SubscriptionType.PREMIUM;
+        User user = userSyncService.getCurrentUser();
+        boolean isPremium = user.getSubscription() == SubscriptionType.PREMIUM;
 
         int limit = appConfigService.getFreeAccountMonthlyLimit();
 
         if (!isPremium) {
-            Long currentMonthCount = expenseRepository.countCurrentMonthExpensesByUserId(currentUser.getId());
+            Long currentCount = expenseRepository.countCurrentMonthExpensesByUserId(user.getId());
 
-            boolean canCreate = appConfigService.canCreateMoreExpenses(currentMonthCount.intValue(), false);
+            boolean canCreate = appConfigService.canCreateMoreExpenses(currentCount.intValue(), false);
 
             if (!canCreate) {
-                double usagePercentage = appConfigService.getUsagePercentage(currentMonthCount.intValue(), false);
+                double usagePercentage = appConfigService.getUsagePercentage(currentCount.intValue(), false);
 
                 throw new IllegalStateException(
-                        String.format("Has alcanzado el límite de %d gastos mensuales para cuentas FREE (%.0f%% de uso). " +
-                                "Actualiza a PREMIUM para gastos ilimitados.", limit, usagePercentage)
+                        String.format("Has alcanzado el límite de %d gastos mensuales " +
+                                        "para cuentas FREE (%.0f%% de uso). " +
+                                        "Actualiza a PREMIUM para gastos ilimitados.",
+                                limit, usagePercentage)
                 );
             }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // PATRÓN OBSERVER - MÉTODO NUEVO
+    // ═══════════════════════════════════════════════════════════
+
+    private void checkAndPublishLimitAlert(User user) {
+        if (user.getSubscription() == SubscriptionType.PREMIUM) {
+            return; // Premium no tiene límites
+        }
+
+        Long currentCount = expenseRepository.countCurrentMonthExpensesByUserId(user.getId());
+        int limit = appConfigService.getFreeAccountMonthlyLimit();
+        double usagePercentage = appConfigService.getUsagePercentage(currentCount.intValue(), false);
+
+        // Publicar alerta si supera el 80% del límite
+        if (usagePercentage >= 80.0 && usagePercentage < 100.0) {
+            LimitAlertEvent event = new LimitAlertEvent(
+                    user.getId(),
+                    user.getEmail(),
+                    currentCount.intValue(),
+                    limit,
+                    usagePercentage
+            );
+
+            eventPublisher.publishLimitAlert(event);
         }
     }
 
