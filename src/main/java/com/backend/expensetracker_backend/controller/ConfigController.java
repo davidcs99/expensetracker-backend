@@ -22,6 +22,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ConfigController {
 
+    private static final String UNLIMITED = "UNLIMITED";
     private final AppConfigServiceImpl appConfigService;
     private final UserSyncService userSyncService;
     private final ExpenseRepository expenseRepository;
@@ -70,9 +71,9 @@ public class ConfigController {
         response.put("userId", currentUser.getId());
         response.put("userEmail", currentUser.getEmail());
         response.put("subscriptionType", currentUser.getSubscription().name());
-        response.put("monthlyLimit", isPremium ? "UNLIMITED" : limit);
+        response.put("monthlyLimit", isPremium ? UNLIMITED : limit);
         response.put("currentUsage", currentMonthCount);
-        response.put("remainingExpenses", isPremium ? "UNLIMITED" : (limit - currentMonthCount.intValue()));
+        response.put("remainingExpenses", isPremium ? UNLIMITED : (limit - currentMonthCount.intValue()));
         response.put("usagePercentage", String.format("%.2f%%", usagePercentage));
         response.put("canCreateMore", canCreateMore);
         response.put("singletonInstanceCreatedAt", instanceTime);
@@ -93,7 +94,7 @@ public class ConfigController {
         Map<String, Object> response = new LinkedHashMap<>();
 
         response.put("freeLimitMonthly", appConfigService.getFreeAccountMonthlyLimit());
-        response.put("premiumLimitMonthly", "UNLIMITED");
+        response.put("premiumLimitMonthly", UNLIMITED);
         response.put("singletonInstance", appConfigService.getInstanceCreationTime());
 
         return ResponseEntity.ok(response);

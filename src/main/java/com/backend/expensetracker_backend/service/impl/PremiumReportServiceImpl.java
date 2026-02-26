@@ -87,7 +87,7 @@ public class PremiumReportServiceImpl implements ReportService {
 
                     return new ReportDTO.MonthlyExpense(monthName, monthTotal, monthExpenses.size());
                 })
-                .collect(Collectors.toList());
+                .toList();
 
         report.setMonthlyBreakdown(monthlyBreakdown);
 

@@ -22,18 +22,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ExpenseServiceImpl implements ExpenseService {
 
+    private static final String MSG_EXPENSE_NOT_FOUND = "Gasto no encontrado con id: ";
     private final ExpenseRepository expenseRepository;
     private final CategoryRepository categoryRepository;
     private final UserSyncService userSyncService;
     private final AppConfigService appConfigService;
-    private final EventPublisher eventPublisher;  // ← NUEVO
+    private final EventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -74,7 +74,7 @@ public class ExpenseServiceImpl implements ExpenseService {
         return expenseRepository.findByUserIdOrderByDateDesc(currentUser.getId())
                 .stream()
                 .map(this::mapToResponseDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -85,7 +85,7 @@ public class ExpenseServiceImpl implements ExpenseService {
                         currentUser.getId(), startDate, endDate)
                 .stream()
                 .map(this::mapToResponseDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -93,7 +93,7 @@ public class ExpenseServiceImpl implements ExpenseService {
     public ExpenseResponseDTO getExpenseById(Long id) {
         User currentUser = userSyncService.getCurrentUser();
         Expense expense = expenseRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Gasto no encontrado con id: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(MSG_EXPENSE_NOT_FOUND + id));
 
         if (!expense.getUser().getId().equals(currentUser.getId())) {
             throw new IllegalArgumentException("No tienes permiso para ver este gasto");
@@ -107,7 +107,7 @@ public class ExpenseServiceImpl implements ExpenseService {
     public ExpenseResponseDTO updateExpense(Long id, ExpenseUpdateDTO dto) {
         User currentUser = userSyncService.getCurrentUser();
         Expense expense = expenseRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Gasto no encontrado con id: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(MSG_EXPENSE_NOT_FOUND + id));
 
         if (!expense.getUser().getId().equals(currentUser.getId())) {
             throw new IllegalArgumentException("No tienes permiso para modificar este gasto");
@@ -143,7 +143,7 @@ public class ExpenseServiceImpl implements ExpenseService {
     public void deleteExpense(Long id) {
         User currentUser = userSyncService.getCurrentUser();
         Expense expense = expenseRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Gasto no encontrado con id: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(MSG_EXPENSE_NOT_FOUND + id));
 
         if (!expense.getUser().getId().equals(currentUser.getId())) {
             throw new IllegalArgumentException("No tienes permiso para eliminar este gasto");
@@ -153,8 +153,6 @@ public class ExpenseServiceImpl implements ExpenseService {
         log.info("Gasto eliminado: expenseId={}, userId={}", id, currentUser.getId());
     }
 
-    @Override
-    @Transactional(readOnly = true)
     public void validateUserCanCreateExpense() {
         User user = userSyncService.getCurrentUser();
         boolean isPremium = user.getSubscription() == SubscriptionType.PREMIUM;

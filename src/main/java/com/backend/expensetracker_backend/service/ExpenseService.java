@@ -21,6 +21,4 @@ public interface ExpenseService {
 
     void deleteExpense(Long id);
 
-    // Método para validar límites de usuarios FREE
-    void validateUserCanCreateExpense();
 }

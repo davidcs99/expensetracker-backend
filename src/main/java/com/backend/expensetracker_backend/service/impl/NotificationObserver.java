@@ -14,7 +14,7 @@ public class NotificationObserver implements EventObserver {
         log.warn("╔═══════════════════════════════════════════════════════════╗");
         log.warn("║  🔔 ALERTA DE LÍMITE - NOTIFICACIÓN                      ║");
         log.warn("╠═══════════════════════════════════════════════════════════╣");
-        log.warn("║  Usuario: {}                   ║", padRight(event.getUserEmail(), 38));
+        log.warn("║  Usuario: %-38s║", event.getUserEmail());  // ← CORREGIDO
         log.warn("║  Gastos actuales: {}/{}                                  ║",
                 event.getCurrentExpenseCount(), event.getMonthlyLimit());
         log.warn("║  Porcentaje de uso: {}%                                ║",
@@ -34,7 +34,5 @@ public class NotificationObserver implements EventObserver {
                 event.getMonthlyLimit());
     }
 
-    private String padRight(String s, int n) {
-        return String.format("%-" + n + "s", s);
-    }
+
 }

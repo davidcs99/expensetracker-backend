@@ -53,7 +53,7 @@ sonar {
 		property "sonar.projectKey", "expensetracker-backend"
 		property "sonar.projectName", "ExpenseTracker Backend"
 		property "sonar.host.url", "http://localhost:9001"
-		property "sonar.token", "sqp_5f51b99134ced496c83d1c5c73161f052d6e0c1c"
+		property "sonar.token", "sqp_25b13f42c0130e0dd8fd1cbf15f887defc019bcf"
 		property "sonar.sources", "src/main/java"
 		property "sonar.java.binaries", "build/classes/java/main"
 		property "sonar.sourceEncoding", "UTF-8"

@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,22 +20,18 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     public CategoryResponseDTO createCategory(CategoryCreateDTO dto) {
-        // Verificar que no exista una categoría con el mismo nombre
         categoryRepository.findByName(dto.getName())
                 .ifPresent(c -> {
                     throw new IllegalArgumentException("Ya existe una categoría con el nombre: " + dto.getName());
                 });
 
-        // Crear nueva categoría
         Category category = new Category();
         category.setName(dto.getName());
         category.setDescription(dto.getDescription());
         category.setActive(true);
 
-        // Guardar
         Category saved = categoryRepository.save(category);
 
-        // Convertir a DTO de respuesta
         return mapToResponseDTO(saved);
     }
 
@@ -46,7 +41,7 @@ public class CategoryServiceImpl implements CategoryService {
         return categoryRepository.findByActiveTrue()
                 .stream()
                 .map(this::mapToResponseDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
