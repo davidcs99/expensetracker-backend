@@ -50,10 +50,10 @@ tasks.named('test') {
 
 sonar {
 	properties {
-		property "sonar.projectKey", "expensetracker-backend"
-		property "sonar.projectName", "ExpenseTracker Backend"
+		property "sonar.projectKey", "expensetracker-backend-before"
+		property "sonar.projectName", "ExpenseTracker BEFORE"
 		property "sonar.host.url", "http://localhost:9001"
-		property "sonar.token", "sqp_5f51b99134ced496c83d1c5c73161f052d6e0c1c"
+		property "sonar.token", "sqp_0d16a101eb55c1a1f2ef3e8524ffb334a916065f"
 		property "sonar.sources", "src/main/java"
 		property "sonar.java.binaries", "build/classes/java/main"
 		property "sonar.sourceEncoding", "UTF-8"
